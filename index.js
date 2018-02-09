@@ -1,11 +1,10 @@
 /* eslint-disable  func-names */
 /* eslint quote-props: ["error", "consistent"]*/
 /**
- * This sample demonstrates a simple skill built with the Amazon Alexa Skills
- * nodejs skill development kit.
- * This sample supports multiple lauguages. (en-US, en-GB, de-DE).
- * The Intent Schema, Custom Slots and Sample Utterances for this skill, as well
- * as testing instructions are located at https://github.com/alexa/skill-sample-nodejs-fact
+ * DialogSkills.js
+ * An open source framwork for rapidly creating Alexa skills from DialogFlow Agents.
+ * 2018 Copyright, Aaron Franco
+ * MIT License
  **/
 
 
@@ -13,20 +12,12 @@ const Alexa = require('alexa-sdk');
 const AWS = require('aws-sdk');
 const request = require('request');
 const md5 = require('md5');
-const dynamodb = new AWS.DynamoDB({apiVersion: '2012-08-10'});
+require('dynamo.js')
+const db = new DatabaseAdapter();
 require('dotenv').config();
+const namedHandlers = require('./namedHandlers')
 
-const handlers = {
-
-    /*>>>> START HANDLERS*/
-    'Start': function(){
-      this.emit('GenericHandler')
-    },
-    'NamedIntent':function(){
-      this.emit('GenericHandler')
-    },
-    /*>>>> END HANDLERS */
-
+const handlers = Object.assign({}, namedHandlers, {
     // Alexa Replies to the Start Handler after various Async processing
     'AlexaAsks': function() {
       // Alexa Asks the user
@@ -50,19 +41,8 @@ const handlers = {
       // console.log("Getting context")
       // scope the handler for Async response data management
       var thisScoped = this;
-
-      // set params for the DynamoDB request
-      var params = {
-        Key: {
-         "session": {
-           S:  md5(this.event.session.sessionId)
-          }
-        },
-        TableName: process.env.TABLE_NAME
-       };
-
       // execute the DynamoDB getItem API
-      dynamodb.getItem(params, function(err, data) {
+      db.getItem(this.event.session.sessionId, function(err, data){
         // handle any errors
         if (err) {
           console.log(err, err.stack); // an error occurred
@@ -73,64 +53,41 @@ const handlers = {
               thisScoped.handler.context = "[]";
               // create a new session since one has yet to exist in DynamoDB
               thisScoped.emit('SessionCreate');
-
             } else {
-
               // set up our sessionData
               // TODO: Split by Session ID and Context
               thisScoped.handler.context = data.Item.context.S;
-
-
             }
             if(thisScoped.handler.useLastRequest){
               thisScoped.handler.context = data.Item.lastcontext.S;
               thisScoped.handler.userSays = data.Item.lastsaid.S;
             }
             thisScoped.emit(thisScoped.handler.nextHandler);
-
         }
-
-      });
+      })
 
     },
 
     // setting context for a user session after context is received from DialogFlow
     'SetContext':function(){
-
-      // set a new context variable, or update an existing on using DynamoDB putItem API
-      var params = {
-         Item: {
-          "session": {
-            S: md5(this.event.session.sessionId)
-           },
-          "context": {
-            S: this.handler.context
-          },
-          "lastsaid":{
-            S: this.handler.userSays
-          },
-          "lastcontext":{
-            S: this.handler.lastContext
-          }
-         },
-         TableName: process.env.TABLE_NAME
-        };
-
-        // make the API call to Dynamo DB
-        dynamodb.putItem(params, function(err, data) {
+        db.update(this.event.session.sessionId, this.handler.context,this.handler.userSays, this.handler.lastContext, this.handler.nextError, function(err, data){
           if (err) {
-
             console.log(err, err.stack); // an error occurred
-
           }else{
-
             // no need to save the data to a variable becuse this will only be called after a response received
             console.log(data); // successful response
-
           }
+        })
 
-        });
-
+    },
+    'ResetContext': function() {
+      db.delete(this.event.session.sessionId, function(err, data){
+        if (err) {
+            console.error("Unable to delete item. Error JSON:", JSON.stringify(err, null, 2));
+        } else {
+            console.log("DeleteItem succeeded:", JSON.stringify(data, null, 2));
+        }
+      })
     },
     'CallDialogFlow':function(){
       var thisScoped = this;
@@ -157,6 +114,14 @@ const handlers = {
             thisScoped.handler.AlexaSays = data.result.fulfillment.speech;
             thisScoped.emit('SetContext')
             thisScoped.emit(thisScoped.handler.speechHandler)
+          }else if(data.result.action == 'book.end'){
+            thisScoped.handler.lastContext = thisScoped.handler.context; // last context
+            console.log(thisScoped.handler.lastContext)
+            thisScoped.handler.context = JSON.stringify(data.result.contexts); // new context
+            thisScoped.handler.AlexaSays = data.result.fulfillment.speech;
+            thisScoped.emit('ResetContext')
+            // TODO: Delete the context item here
+            thisScoped.emit("AlexaTells")
           }
       });
     },
@@ -180,7 +145,7 @@ const handlers = {
         this.emit(':tell', this.t('STOP_MESSAGE'));
     },
 
-};
+});
 
 exports.handler = function (event, context, callback) {
     const alexa = Alexa.handler(event, context, callback);
