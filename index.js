@@ -11,7 +11,6 @@
 const Alexa = require('alexa-sdk');
 const AWS = require('aws-sdk');
 const request = require('request');
-const md5 = require('md5');
 require('dynamo.js')
 const db = new DatabaseAdapter();
 require('dotenv').config();
