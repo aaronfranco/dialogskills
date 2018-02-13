@@ -8,14 +8,14 @@ class DynamoAdapter {
   }
   delete(session, callback){
     if(session === undefined || session === null){
-      throw new Error("Session required for database operation: Get")
+      throw new Error("Session required for database operation: Delete")
     }
     if(callback === undefined || callback === null){
       return new Error("Callback required for database operation: Delete")
     }
     var dynamodb = new AWS.DynamoDB({apiVersion: '2012-08-10'});
     var params = {
-       Item: {
+       Key: {
         "session": {
           S: md5(session)
          }
@@ -45,10 +45,22 @@ class DynamoAdapter {
   }
   update(session, context, lastsaid, lastcontext, nexterror, callback){
     if(session === undefined || session === null){
-      throw new Error("Session required for database operation: Get")
+      throw new Error("Session required for database operation: UPDATE")
+    }
+    if(context === undefined || context === null){
+      throw new Error("Context required for database operation: UPDATE")
+    }
+    if(lastsaid === undefined || lastsaid === null){
+      throw new Error("Lastsaid required for database operation: UPDATE")
+    }
+    if(lastcontext === undefined || lastcontext === null){
+      throw new Error("Lastcontext required for database operation: UPDATE")
+    }
+    if(nexterror === undefined || nexterror === null){
+      throw new Error("Nexterror required for database operation: UPDATE")
     }
     if(callback === undefined || callback === null){
-      throw new Error("Callback required for database operation: Get")
+      throw new Error("Callback required for database operation: UPDATE")
     }
     var dynamodb = new AWS.DynamoDB({apiVersion: '2012-08-10'});
     var params = {
@@ -63,7 +75,7 @@ class DynamoAdapter {
           S: lastsaid
         },
         "lastcontext":{
-          S: lastContext
+          S: lastcontext
         },
         "nexterror":{
           S: nexterror
