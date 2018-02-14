@@ -5,7 +5,7 @@ DialogSkills is a framework for rapid development of Alexa Skills by exporting A
 The goal of this project is to support more than just one platform and backend. As our community grows, we encourage the development of multiple configuration support. For example, Google Cloud Functions, IBM Bluemix etc.
 
 ## Conventions
-The convention is based on a generic event handler that manages all Alexa input. When an Utterance is recognized by Alexa, an Intent is triggered in the skill's function or backend. The Alexa SDK then triggers a handler based on what is meant to happen according to the intent. The convention in DialogSkills uses a named handler called "GenericHandler" which uses the name of the incoming Slot from Alexa's recognition and forwards it to another handler named "CallDialogFlow." 
+The convention is based on a generic event handler that manages all Alexa input. When an Utterance is recognized by Alexa, an Intent is triggered in the skill's function or backend. The Alexa SDK then triggers a handler based on what is meant to happen according to the intent. The convention in DialogSkills uses a named handler called "GenericHandler" which uses the name of the incoming Slot from Alexa's recognition and forwards it to another handler named "CallDialogFlow."
 
 ## FAQ
 ##### Q. Why use DialogFlow as opposed to just using Alexa Skills Builder?
@@ -19,6 +19,7 @@ A. I'm comfortable with using DialogFlow for building chat interfaces and I woul
 6. Export bash script to migrate DialogFlow data to Alexa format
     - convert Intents to Intents with sample Alexa Slots based on what User Says
     - convert user says to utterances and slots using Skill Management API
+7. Export / Import custom slots and Entities
 
 ### Features To build
 1. Full export and programmatic creation of an Alexa Skills
