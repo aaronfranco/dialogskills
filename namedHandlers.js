@@ -1,9 +1,12 @@
 var namedHandlers = {
-    'one':function(){
-      console.log("One Handler")
+    'Showmyhomework':function(){
+      this.emit("GenericHandler")
     },
-    'two':function(){
-      console.log("Two Handler")
+    'Homework':function(){
+      this.emit("GenericHandler")
+    },
+    'Areyouarobot':function(){
+      this.emit("GenericHandler")
     }
 }
 module.exports = namedHandlers

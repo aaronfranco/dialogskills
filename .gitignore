@@ -39,6 +39,10 @@ jspm_packages/
 # Typescript v1 declaration files
 typings/
 
+# testing
+test/
+speechAssets/
+
 # Optional npm cache directory
 .npm
 

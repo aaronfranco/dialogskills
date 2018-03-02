@@ -11,10 +11,11 @@
 const Alexa = require('alexa-sdk');
 const AWS = require('aws-sdk');
 const request = require('request');
-require('dynamo.js')
-const db = new DatabaseAdapter();
+const DatabaseAdapter = require('./dynamo.js')
 require('dotenv').config();
 const namedHandlers = require('./namedHandlers')
+
+const db = new DatabaseAdapter();
 
 const handlers = Object.assign({}, namedHandlers, {
     // Alexa Replies to the Start Handler after various Async processing
@@ -29,8 +30,13 @@ const handlers = Object.assign({}, namedHandlers, {
     },
     'GenericHandler': function() {
       // console.log("In Generic Handler")
-      this.handler.userSays = this.event.request.intent.slots[Object.keys(this.event.request.intent.slots)[0]].name.split("_").join(" ")
-      // console.log("User Says: " + this.handler.userSays)
+      var slotName = this.event.request.intent.slots[Object.keys(this.event.request.intent.slots)[0]].name;
+      this.handler.userSays = slotName;
+      
+      if(slotName.indexOf('_') > -1){
+        this.handler.userSays = this.event.request.intent.slots[Object.keys(this.event.request.intent.slots)[0]].name.split("_").join(" ")
+      }
+
       this.handler.speechHandler = "AlexaAsks"
       this.handler.nextHandler = 'CallDialogFlow'
       this.emit('GetContext')
@@ -41,7 +47,7 @@ const handlers = Object.assign({}, namedHandlers, {
       // scope the handler for Async response data management
       var thisScoped = this;
       // execute the DynamoDB getItem API
-      db.getItem(this.event.session.sessionId, function(err, data){
+      db.get(this.event.session.sessionId, function(err, data){
         // handle any errors
         if (err) {
           console.log(err, err.stack); // an error occurred
@@ -115,7 +121,6 @@ const handlers = Object.assign({}, namedHandlers, {
             thisScoped.emit(thisScoped.handler.speechHandler)
           }else if(data.result.action == 'book.end'){
             thisScoped.handler.lastContext = thisScoped.handler.context; // last context
-            console.log(thisScoped.handler.lastContext)
             thisScoped.handler.context = JSON.stringify(data.result.contexts); // new context
             thisScoped.handler.AlexaSays = data.result.fulfillment.speech;
             thisScoped.emit('ResetContext')
@@ -152,3 +157,5 @@ exports.handler = function (event, context, callback) {
     alexa.registerHandlers(handlers);
     alexa.execute();
 };
+
+exports.intentHandlers = handlers
