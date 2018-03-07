@@ -12,8 +12,10 @@ const Alexa = require('alexa-sdk');
 const AWS = require('aws-sdk');
 const request = require('request');
 const DatabaseAdapter = require('./dynamo.js')
+const md5 = require('md5')
 require('dotenv').config();
 const namedHandlers = require('./namedHandlers')
+const requestParams = require('./requestParams')
 
 const db = new DatabaseAdapter();
 
@@ -30,13 +32,24 @@ const handlers = Object.assign({}, namedHandlers, {
     },
     'GenericHandler': function() {
       // console.log("In Generic Handler")
-      var slotName = this.event.request.intent.slots[Object.keys(this.event.request.intent.slots)[0]].name;
+      let slotName = this.event.request.intent.slots[Object.keys(this.event.request.intent.slots)[0]].name;
       this.handler.userSays = slotName;
-      
-      if(slotName.indexOf('_') > -1){
-        this.handler.userSays = this.event.request.intent.slots[Object.keys(this.event.request.intent.slots)[0]].name.split("_").join(" ")
-      }
 
+      if(slotName.indexOf('_') > -1){
+        this.handler.userSays = slotName.split("_").join(" ")
+      }
+      console.log("Slot Name: ", slotName)
+      switch(slotName){
+        // TODO: Map AMAZON.type slots here to their values
+        case "numberslot":
+          this.handler.userSays = this.event.request.intent.slots['numberslot'].value
+          break;
+        // TODO: Map custom DialogFlow Entities to their slots here to manager correct slot filling
+        case "expensecategoryslot":
+          this.handler.userSays = this.event.request.intent.slots["expensecategoryslot"].value
+          break;
+      }
+      console.log("userSays: ", this.handler.userSays)
       this.handler.speechHandler = "AlexaAsks"
       this.handler.nextHandler = 'CallDialogFlow'
       this.emit('GetContext')
@@ -56,16 +69,20 @@ const handlers = Object.assign({}, namedHandlers, {
             if(Object.keys(data).length === 0){
               // console.log("Creating Session")
               thisScoped.handler.context = "[]";
-              // create a new session since one has yet to exist in DynamoDB
+              // create a new session since one h7568a8a290ea4a358cc6760ce73cb0e2as yet to exist in DynamoDB
               thisScoped.emit('SessionCreate');
             } else {
               // set up our sessionData
               // TODO: Split by Session ID and Context
               thisScoped.handler.context = data.Item.context.S;
             }
-            if(thisScoped.handler.useLastRequest){
-              thisScoped.handler.context = data.Item.lastcontext.S;
-              thisScoped.handler.userSays = data.Item.lastsaid.S;
+
+            // TODO:
+            if(data.Item !== undefined){
+              if(thisScoped.handler.useLastRequest !== undefined && thisScoped.handler.useLastRequest === true){
+                thisScoped.handler.context = data.Item.lastcontext.S;
+                thisScoped.handler.userSays = data.Item.lastsaid.S;
+              }
             }
             thisScoped.emit(thisScoped.handler.nextHandler);
         }
@@ -113,20 +130,21 @@ const handlers = Object.assign({}, namedHandlers, {
           json:true
       }
       request(options, function(err,httpResponse,data){
-          if(data.result.action == 'adventure.book'){
-            thisScoped.handler.lastContext = thisScoped.handler.context; // last context
-            thisScoped.handler.context = JSON.stringify(data.result.contexts); // new context
-            thisScoped.handler.AlexaSays = data.result.fulfillment.speech;
+          thisScoped.handler.lastContext = thisScoped.handler.context; // last context
+          thisScoped.handler.context = JSON.stringify(data.result.contexts); // new context
+          thisScoped.handler.AlexaSays = data.result.fulfillment.speech;
+          let state = data.result.action.split(".")
+          if(state[0] == 'in'){
             thisScoped.emit('SetContext')
             thisScoped.emit(thisScoped.handler.speechHandler)
-          }else if(data.result.action == 'book.end'){
-            thisScoped.handler.lastContext = thisScoped.handler.context; // last context
-            thisScoped.handler.context = JSON.stringify(data.result.contexts); // new context
-            thisScoped.handler.AlexaSays = data.result.fulfillment.speech;
+          }else if(state[0] == 'end'){
+            // call post hook for data integration
+            let params = requestParams[state[1]]
+            console.log(thisScoped.handler.context)
             thisScoped.emit('ResetContext')
-            // TODO: Delete the context item here
             thisScoped.emit("AlexaTells")
           }
+
       });
     },
     'Unhandled':function(){
@@ -152,6 +170,7 @@ const handlers = Object.assign({}, namedHandlers, {
 });
 
 exports.handler = function (event, context, callback) {
+  console.log(JSON.stringify(event))
     const alexa = Alexa.handler(event, context, callback);
     alexa.appId = process.env.APP_ID;
     alexa.registerHandlers(handlers);

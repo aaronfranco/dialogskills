@@ -1,4 +1,5 @@
-# DialogSkills
+# DialogSkills v0.1a
+### Under heavy development and looking for contributors
 DialogSkills is a framework for rapid development of Alexa Skills by exporting Agents from Google's DialogFlow and converting the exported data into usable Alexa Skills following a programming convention. This version of DialogSkills makes the assumption that your skill's backend is hosted as an AWS Lambda function written in Node.js.
 
 ## Goals
@@ -37,6 +38,9 @@ A. I'm comfortable with using DialogFlow for building chat interfaces and I woul
     - convert user says to utterances and slots using Skill Management API
 7. Export / Import custom slots and Entities
 8. Write more tests
+9. Auto create DynamoDB table
+10. Auto generate Lambda functions
+    - Create ENV vars in Lambda function instead of relying on .env file import.
 
 ### Features To build
 1. Full export and programmatic creation of an Alexa Skills

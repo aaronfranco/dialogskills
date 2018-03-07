@@ -57,7 +57,7 @@ class DynamoAdapter {
       throw new Error("Lastcontext required for database operation: UPDATE")
     }
     if(nexterror === undefined || nexterror === null){
-      throw new Error("Nexterror required for database operation: UPDATE")
+      nexterror = "null"
     }
     if(callback === undefined || callback === null){
       throw new Error("Callback required for database operation: UPDATE")

@@ -93,7 +93,7 @@ describe("Running tests on DynamoDB Database adapter UPDATE", function(){
     try{
       db.update("123", "context", "lastsaid", "lastcontext")
     }catch (e){
-      test.assert.equal(e.message, "Nexterror required for database operation: UPDATE")
+      test.assert.equal(e.message, "Callback required for database operation: UPDATE")
     }
   })
   it("Expects a callback function to be passed to the UPDATE method.", function(){

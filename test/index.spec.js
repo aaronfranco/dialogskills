@@ -39,30 +39,6 @@ describe('Running Unit test on Skill Handlers', () => {
     expect(skillsHandler.intentHandlers.handler.userSays).to.equal("add task")
     AWS.restore('DynamoDB');
   });
-  it('Named Handler Homework should call GenericHandler', async function () {
-    let spyer = function(call){}
-    skillsHandler.intentHandlers.emit = spyer
-    skillsHandler.intentHandlers.event = events.withUnderscore
-    skillsHandler.intentHandlers.handler = {}
-    const spy = new sinon.spy();
-    const spy1 = new sinon.spy(skillsHandler.intentHandlers, "emit")
-    AWS.mock('DynamoDB', 'getItem', spy);
-    skillsHandler.intentHandlers.Homework()
-    expect(spy1.calledWith("GenericHandler")).to.be.true
-    AWS.restore('DynamoDB');
-  });
-  it('Named Handler Areyouarobot should call GenericHandler', async function () {
-    let spyer = function(call){}
-    skillsHandler.intentHandlers.emit = spyer
-    skillsHandler.intentHandlers.event = events.withUnderscore
-    skillsHandler.intentHandlers.handler = {}
-    const spy = new sinon.spy();
-    const spy1 = new sinon.spy(skillsHandler.intentHandlers, "emit")
-    AWS.mock('DynamoDB', 'getItem', spy);
-    skillsHandler.intentHandlers.Areyouarobot()
-    expect(spy1.calledWith("GenericHandler")).to.be.true
-    AWS.restore('DynamoDB');
-  });
   it('ResetContext should remove item from DynamoDB', function () {
     let spyer = function(call){}
     skillsHandler.intentHandlers.emit = spyer

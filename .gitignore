@@ -36,12 +36,13 @@ build/Release
 node_modules/
 jspm_packages/
 
-# Typescript v1 declaration files
+# Typescript v1 declaration filesamzn1.ask.skill.e8e36fc8-4amznamzn1.ask.skill.e8e36fc8-4c27-49a7-9d93-a91dbc216d6f1.ask.skill.e8e36fc8-4c27-49a7-9d93-a91dbc216d6fc27-49a7-9d93-a91dbc216d6f
 typings/
 
 # testing
 test/
 speechAssets/
+namedHandlers.js
 
 # Optional npm cache directory
 .npm
