@@ -1,10 +1,14 @@
-module.exports requestParams = {
+var requestParams = {
   "add_expense":{
-    "url":"https://www.example.com",
-    "method":"POST",
-    "headers":{
-      "Authorization":"xyz",
-      "Content-Type":"application/json"
+    "url":"https://httpbin.org/post",
+    "options":{
+      "method":"POST",
+      "headers":{
+        "Authorization":"xyz",
+        "Content-Type":"application/json"
+      }
     }
   }
 }
+
+module.exports = requestParams

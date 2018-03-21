@@ -64,3 +64,4 @@ namedHandlers.js
 
 # dotenv environment variables file
 .env
+coverage

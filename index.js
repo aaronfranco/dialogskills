@@ -16,11 +16,14 @@ const md5 = require('md5')
 require('dotenv').config();
 const namedHandlers = require('./namedHandlers')
 const requestParams = require('./requestParams')
+require('es6-promise').polyfill();
+require('isomorphic-fetch');
 
 const db = new DatabaseAdapter();
 
 const handlers = Object.assign({}, namedHandlers, {
     // Alexa Replies to the Start Handler after various Async processing
+    // TODO: Use reprompting to ask again if useLastRequest is set to true
     'AlexaAsks': function() {
       // Alexa Asks the user
       if(this.handler.errorHandler){
@@ -58,38 +61,42 @@ const handlers = Object.assign({}, namedHandlers, {
     'GetContext':function(){
       // console.log("Getting context")
       // scope the handler for Async response data management
-      var thisScoped = this;
+      let thisScoped = this;
       // execute the DynamoDB getItem API
+      // TODO: MOve to handler not anonymous function
       db.get(this.event.session.sessionId, function(err, data){
         // handle any errors
         if (err) {
           console.log(err, err.stack); // an error occurred
         }else{
             // if the response contains NO data
-            if(Object.keys(data).length === 0){
-              // console.log("Creating Session")
-              thisScoped.handler.context = "[]";
-              // create a new session since one h7568a8a290ea4a358cc6760ce73cb0e2as yet to exist in DynamoDB
-              thisScoped.emit('SessionCreate');
-            } else {
-              // set up our sessionData
-              // TODO: Split by Session ID and Context
-              thisScoped.handler.context = data.Item.context.S;
-            }
-
-            // TODO:
-            if(data.Item !== undefined){
-              if(thisScoped.handler.useLastRequest !== undefined && thisScoped.handler.useLastRequest === true){
-                thisScoped.handler.context = data.Item.lastcontext.S;
-                thisScoped.handler.userSays = data.Item.lastsaid.S;
-              }
-            }
-            thisScoped.emit(thisScoped.handler.nextHandler);
+            thisScoped.handler.gottenContext = data;
+            thisScoped.emit("GetContextSuccess")
         }
       })
 
     },
+    'GetContextSuccess': function() {
+      let data = this.handler.gottenContext;
+      if(Object.keys(data).length === 0){
+        // console.log("Creating Session")
+        this.handler.context = "[]";
+        // create a new session since one h7568a8a290ea4a358cc6760ce73cb0e2as yet to exist in DynamoDB
+        this.emit('SessionCreate');
+      } else {
+        // set up our sessionData
+        // TODO: Split by Session ID and Context
+        this.handler.context = data.Item.context.S;
+      }
 
+      if(data.Item !== undefined){
+        if(this.handler.useLastRequest !== undefined && this.handler.useLastRequest === true){
+          this.handler.context = data.Item.lastcontext.S;
+          this.handler.userSays = data.Item.lastsaid.S;
+        }
+      }
+      this.emit(thisScoped.handler.nextHandler);
+    },
     // setting context for a user session after context is received from DialogFlow
     'SetContext':function(){
         db.update(this.event.session.sessionId, this.handler.context,this.handler.userSays, this.handler.lastContext, this.handler.nextError, function(err, data){
@@ -114,42 +121,84 @@ const handlers = Object.assign({}, namedHandlers, {
     'CallDialogFlow':function(){
       var thisScoped = this;
       var options = {
-          url:'https://api.dialogflow.com/v1/query?v=20150910',
           method:'POST',
           headers:{
               "Authorization":"Bearer " + process.env.AGENT_ID,
               "Content-Type":"application/json"
           },
-          body:{
+          body:JSON.stringify({
               "contexts": JSON.parse(this.handler.context),
               "lang": "en",
               "query": this.handler.userSays,
               "sessionId": md5(this.event.session.sessionId),
               "timezone": "America/New_York"
-          },
-          json:true
+          })
       }
-      request(options, function(err,httpResponse,data){
-          thisScoped.handler.lastContext = thisScoped.handler.context; // last context
-          thisScoped.handler.context = JSON.stringify(data.result.contexts); // new context
-          thisScoped.handler.AlexaSays = data.result.fulfillment.speech;
-          let state = data.result.action.split(".")
-          if(state[0] == 'in'){
-            thisScoped.emit('SetContext')
-            thisScoped.emit(thisScoped.handler.speechHandler)
-          }else if(state[0] == 'end'){
-            // call post hook for data integration
-            let params = requestParams[state[1]]
-            console.log(thisScoped.handler.context)
-            thisScoped.emit('ResetContext')
-            thisScoped.emit("AlexaTells")
-          }
-
+      fetch('https://api.dialogflow.com/v1/query?v=20150910', options)
+      .then((res) => {
+        return res.json()
+      })
+      .then((res) => {
+        thisScoped.handler.dialogFlowErr = null
+        thisScoped.handler.dialogFlowBody = res
+        thisScoped.handler.dialogFlowHttpResponse = null
+        thisScoped.emit('CallDialogFlowResponse')
+      })
+      .catch((err) => {
+        thisScoped.handler.dialogFlowErr = res
+        thisScoped.handler.dialogFlowBody = null
+        thisScoped.handler.dialogFlowHttpResponse = null
+        thisScoped.emit('CallDialogFlowResponse')
       });
+
+      // request(options, function(err,httpResponse,data){
+      //     thisScoped.handler.dialogFlowErr = err
+      //     thisScoped.handler.dialogFlowBody = data
+      //     thisScoped.handler.dialogFlowHttpResponse = httpResponse
+      //     thisScoped.emit('CallDialogFlowResponse')
+      // });
+    },
+    'CallDialogFlowResponse': function() {
+      let err = this.handler.dialogFlowErr
+      let data = this.handler.dialogFlowBody
+      let httpResponse = this.handler.dialogFlowHttpResponse
+
+      if(err){
+        throw new Error(err)
+      }
+      this.handler.lastContext = this.handler.context; // last context
+      this.handler.context = JSON.stringify(data.result.contexts); // new context
+      this.handler.AlexaSays = data.result.fulfillment.speech;
+      let state = data.result.action.split(".")
+      if(state[0] == 'in'){
+        this.emit('SetContext')
+        this.emit(this.handler.speechHandler)
+      }else if(state[0] == 'end'){
+        // call post hook for data integration
+        let params = requestParams[state[1]]
+        let options = params.options;
+        options.body = JSON.stringify({
+          "contexts":data.result.contexts,
+          "params":data.result.parameters
+        })
+        // optoi
+        fetch(params.url, options)
+        .then((res) => {
+          return res.json()
+        })
+        .then((res) => {
+          this.emit('ResetContext')
+          this.emit("AlexaTells")
+        })
+        .catch((err) => {
+          console.log(err)
+        });
+
+      }
     },
     'Unhandled':function(){
       this.handler.useLastRequest = true;
-      this.handler.errorHandler = "Sorry, I didn't understand your response. I will repeat the questions so you can try again. ";
+      this.handler.errorHandler = process.env.UNHANDLED;
       this.handler.speechHandler = "AlexaAsks"
       this.handler.nextHandler = 'CallDialogFlow'
       this.emit('GetContext')

@@ -22,6 +22,7 @@ TABLE_NAME=adventurebooks
 AWS_ACCESS_KEY_ID=xxx
 AWS_SECRET_ACCESS_KEY=xxx
 AWS_DEFAULT_REGION=us-east-1
+UNHANDLED=Alexa's reply if a request cannot be handled
 ```
 
 ## FAQ
@@ -31,6 +32,7 @@ A. I'm comfortable with using DialogFlow for building chat interfaces and I woul
 ## TODO
 1. Add development pipeline tools
 3. Redesign OO structure (WIP)
+    - Remove anonymous functions into helper class
 4. Database Adapter (WIP)
 5. Cloudformation Template
 6. Export bash script to migrate DialogFlow data to Alexa format
